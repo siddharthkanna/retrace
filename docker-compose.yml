@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      # Local test-bed credentials only; nothing here is reachable from outside Docker.
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: payments
+    volumes:
+      # Postgres runs these files in name order, once, when the database is first created.
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # -h 127.0.0.1: only counts as ready after the setup files above have run.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U app -d payments"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  provider-mock:
+    build: .
+    command: uvicorn services.provider_mock.main:app --host 0.0.0.0 --port 8001 --reload
+    environment:
+      TELEMETRY_DATABASE_URL: postgresql://app:app@db:5432/telemetry
+    volumes:
+      - ./services:/app/services
+    ports:
+      - "8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  payment-api:
+    build: .
+    command: uvicorn services.payment_api.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/payments
+      TELEMETRY_DATABASE_URL: postgresql://app:app@db:5432/telemetry
+      PROVIDER_URL: http://provider-mock:8001
+    volumes:
+      - ./services:/app/services
+      - ./scenarios:/app/scenarios
+      - ./tests:/app/tests
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      provider-mock:
+        condition: service_started

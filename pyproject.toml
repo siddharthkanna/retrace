@@ -1,0 +1,28 @@
+[project]
+name = "retrace"
+version = "0.1.0"
+description = "An agent that investigates API incidents and proves the root cause by reproducing it."
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.142",
+    "uvicorn[standard]>=0.54",
+    "psycopg[binary,pool]>=3.3",
+    "httpx>=0.28",
+    "pydantic-settings>=2",
+    "opentelemetry-sdk",
+    "opentelemetry-instrumentation-fastapi",
+    "opentelemetry-instrumentation-httpx",
+]
+
+[dependency-groups]
+dev = ["pytest>=9", "ruff"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
