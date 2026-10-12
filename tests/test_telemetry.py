@@ -7,7 +7,7 @@ from uuid import uuid4
 import httpx
 import psycopg
 
-API = "http://localhost:8000"
+API = os.environ["PAYMENT_API_URL"]
 
 
 def _query(sql: str, params: tuple) -> list[tuple]:
@@ -53,3 +53,20 @@ def test_charge_leaves_one_trace_across_both_services():
         (trace_id,),
     )
     assert ("charge created",) in provider_logs
+
+
+def test_a_rejected_request_is_logged_with_its_reason():
+    resp = httpx.post(
+        f"{API}/refund",
+        json={"payment_id": 999_999_999, "amount_cents": 100},
+        headers={"Idempotency-Key": str(uuid4())},
+    )
+    assert resp.status_code == 404
+
+    logs = _wait_for_rows(
+        "SELECT level, attributes->>'reason' FROM logs"
+        " WHERE message = 'request rejected' AND attributes->>'path' = %s"
+        " ORDER BY ts DESC LIMIT 1",
+        ("/refund",),
+    )
+    assert logs == [("WARNING", "payment not found")]

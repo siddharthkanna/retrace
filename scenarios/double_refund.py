@@ -4,25 +4,28 @@ from concurrent.futures import ThreadPoolExecutor
 
 from scenarios.base import (
     GroundTruth,
-    Incident,
+    IncidentReport,
     Scenario,
     charge,
     new_order_id,
     refund,
+    restore_database,
     set_flags,
-    set_payment_chaos,
+    slow_refund_writes,
 )
 
 
-def trigger() -> Incident:
+def trigger() -> IncidentReport:
     order_id = new_order_id()
     payment = charge(order_id, 3000).json()
     set_flags(refund_row_locking=False)
-    set_payment_chaos(refund_check_delay_ms=300)
+    slow_refund_writes(0.3)
     with ThreadPoolExecutor(max_workers=2) as pool:
         list(pool.map(lambda _: refund(payment["id"], 3000), range(2)))
-    return Incident(
-        report=f"Finance found 60.00 refunded against a 30.00 payment for order {order_id}.",
+    restore_database()
+    return IncidentReport(
+        description=f"Finance found 60.00 refunded against a 30.00 payment for order {order_id}.",
+        severity="high",
         order_id=order_id,
     )
 

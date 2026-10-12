@@ -1,5 +1,4 @@
--- No UNIQUE constraint on order_id on purpose: the double-charge scenario
--- needs the database to accept two payments for the same order.
+-- order_id is not unique: an order can be paid in more than one payment.
 CREATE TABLE payments (
     id                 BIGSERIAL PRIMARY KEY,
     order_id           TEXT NOT NULL,

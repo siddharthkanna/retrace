@@ -1,12 +1,10 @@
 """SQL for the payments and refunds tables."""
 
-import time
-
 import psycopg
 from psycopg.rows import class_row
 from psycopg_pool import ConnectionPool
 
-from services.payment_api.controls import Chaos, FeatureFlags
+from services.payment_api.controls import FeatureFlags
 from services.payment_api.errors import PaymentNotFoundError, RefundExceedsPaymentError
 from services.payment_api.models import Payment, Refund
 
@@ -15,10 +13,9 @@ _REFUND_COLUMNS = "id, payment_id, amount_cents, provider_refund_id, status"
 
 
 class PaymentRepository:
-    def __init__(self, pool: ConnectionPool, flags: FeatureFlags, chaos: Chaos) -> None:
+    def __init__(self, pool: ConnectionPool, flags: FeatureFlags) -> None:
         self._pool = pool
         self._flags = flags
-        self._chaos = chaos
 
     def get_payment(self, payment_id: int) -> Payment | None:
         with self._pool.connection() as conn, conn.cursor(row_factory=class_row(Payment)) as cur:
@@ -42,9 +39,6 @@ class PaymentRepository:
         idempotency_key: str,
     ) -> Payment:
         """Insert a payment, or return the existing one if the key was already used."""
-        if self._chaos.fail_next_payment_insert:
-            self._chaos.fail_next_payment_insert = False
-            raise psycopg.OperationalError("server closed the connection unexpectedly")
         with self._pool.connection() as conn, conn.cursor(row_factory=class_row(Payment)) as cur:
             payment = cur.execute(
                 "INSERT INTO payments"
@@ -69,36 +63,44 @@ class PaymentRepository:
         concurrent refunds for the same payment cannot both pass the check.
         """
         with self._pool.connection() as conn, conn.cursor(row_factory=class_row(Refund)) as cur:
-            lock = " FOR UPDATE" if self._flags.refund_row_locking else ""
-            payment = conn.execute(
-                f"SELECT amount_cents FROM payments WHERE id = %s{lock}", (payment_id,)
-            ).fetchone()
-            if payment is None:
-                raise PaymentNotFoundError(payment_id)
-            paid_cents = payment[0]
-
-            existing = cur.execute(
-                f"SELECT {_REFUND_COLUMNS} FROM refunds WHERE idempotency_key = %s",
-                (idempotency_key,),
-            ).fetchone()
+            paid_cents = self._paid_cents(conn, payment_id)
+            existing = self._find_refund(cur, idempotency_key)
             if existing is not None:
                 return existing
-
-            refunded_cents = conn.execute(
-                "SELECT COALESCE(SUM(amount_cents), 0) FROM refunds WHERE payment_id = %s",
-                (payment_id,),
-            ).fetchone()[0]
-            if refunded_cents + amount_cents > paid_cents:
+            if self._refunded_cents(conn, payment_id) + amount_cents > paid_cents:
                 raise RefundExceedsPaymentError(payment_id)
+            return self._insert_refund(cur, payment_id, amount_cents, idempotency_key)
 
-            # Chaos: widen the gap between the check above and the insert below.
-            time.sleep(self._chaos.refund_check_delay_ms / 1000)
+    def _paid_cents(self, conn: psycopg.Connection, payment_id: int) -> int:
+        """The amount paid. Locks the payment row unless row locking is switched off."""
+        lock = " FOR UPDATE" if self._flags.refund_row_locking else ""
+        payment = conn.execute(
+            f"SELECT amount_cents FROM payments WHERE id = %s{lock}", (payment_id,)
+        ).fetchone()
+        if payment is None:
+            raise PaymentNotFoundError(payment_id)
+        return payment[0]
 
-            return cur.execute(
-                "INSERT INTO refunds (payment_id, amount_cents, status, idempotency_key)"
-                f" VALUES (%s, %s, 'pending', %s) RETURNING {_REFUND_COLUMNS}",
-                (payment_id, amount_cents, idempotency_key),
-            ).fetchone()
+    def _find_refund(self, cur: psycopg.Cursor[Refund], idempotency_key: str) -> Refund | None:
+        return cur.execute(
+            f"SELECT {_REFUND_COLUMNS} FROM refunds WHERE idempotency_key = %s",
+            (idempotency_key,),
+        ).fetchone()
+
+    def _refunded_cents(self, conn: psycopg.Connection, payment_id: int) -> int:
+        return conn.execute(
+            "SELECT COALESCE(SUM(amount_cents), 0) FROM refunds WHERE payment_id = %s",
+            (payment_id,),
+        ).fetchone()[0]
+
+    def _insert_refund(
+        self, cur: psycopg.Cursor[Refund], payment_id: int, amount_cents: int, idempotency_key: str
+    ) -> Refund:
+        return cur.execute(
+            "INSERT INTO refunds (payment_id, amount_cents, status, idempotency_key)"
+            f" VALUES (%s, %s, 'pending', %s) RETURNING {_REFUND_COLUMNS}",
+            (payment_id, amount_cents, idempotency_key),
+        ).fetchone()
 
     def complete_refund(self, refund_id: int, provider_refund_id: str) -> Refund:
         with self._pool.connection() as conn, conn.cursor(row_factory=class_row(Refund)) as cur:

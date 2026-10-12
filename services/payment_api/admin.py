@@ -1,11 +1,11 @@
-"""Endpoints that change feature flags and chaos settings at runtime."""
+"""Endpoints that read and change feature flags at runtime."""
 
 import logging
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from services.payment_api.controls import Chaos, FeatureFlags
+from services.payment_api.controls import FeatureFlags
 
 logger = logging.getLogger(__name__)
 
@@ -25,17 +25,8 @@ def get_flags(request: Request) -> FeatureFlags:
 @router.put("/flags", response_model=FeatureFlags)
 def set_flags(new: FeatureFlags, request: Request) -> FeatureFlags:
     flags: FeatureFlags = request.app.state.flags
-    logger.info(
-        "feature flags updated",
-        extra={"previous": flags.model_dump(), "current": new.model_dump()},
-    )
+    previous, current = flags.model_dump(), new.model_dump()
+    if previous != current:
+        logger.info("feature flags updated", extra={"previous": previous, "current": current})
     _update(flags, new)
     return flags
-
-
-@router.put("/chaos", response_model=Chaos)
-def set_chaos(new: Chaos, request: Request) -> Chaos:
-    # Deliberately not logged: chaos stands in for failures nobody announced.
-    chaos: Chaos = request.app.state.chaos
-    _update(chaos, new)
-    return chaos

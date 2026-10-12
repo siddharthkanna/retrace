@@ -1,24 +1,37 @@
 """Scenario 2: the customer is charged but the payment is never recorded."""
 
+import threading
+import time
+
 from scenarios.base import (
     GroundTruth,
-    Incident,
+    IncidentReport,
     Scenario,
     charge,
+    drop_database_connections,
     new_order_id,
-    set_payment_chaos,
+    set_provider_chaos,
+    wait_until_healthy,
 )
 
 
-def trigger() -> Incident:
-    set_payment_chaos(fail_next_payment_insert=True)
+def trigger() -> IncidentReport:
     order_id = new_order_id()
-    charge(order_id, 2500)
-    return Incident(
-        report=(
+    # The provider takes a second to answer. Halfway through, the database drops the
+    # payment API's connections, so the charge succeeds and recording it fails.
+    set_provider_chaos(delay_next_charge_response_s=1)
+    request = threading.Thread(target=charge, args=(order_id, 2500))
+    request.start()
+    time.sleep(0.5)
+    drop_database_connections()
+    request.join()
+    wait_until_healthy()
+    return IncidentReport(
+        description=(
             f"A customer was charged 25.00 for order {order_id} but saw an error,"
             " and the order still shows as unpaid."
         ),
+        severity="high",
         order_id=order_id,
     )
 
@@ -34,7 +47,7 @@ SCENARIO = Scenario(
         ),
         key_evidence=(
             "provider log: charge created",
-            "payment-api log: unhandled error with a database OperationalError",
+            "payment-api log: discarding closed connection, then an unhandled OperationalError",
             "no row in payments for the order",
         ),
     ),

@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import httpx
 
-API = "http://localhost:8000"
+API = os.environ["PAYMENT_API_URL"]
 PROVIDER = os.environ["PROVIDER_URL"]
 
 

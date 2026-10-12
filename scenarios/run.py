@@ -3,7 +3,7 @@
 import argparse
 
 from scenarios import charge_without_record, double_charge, double_refund
-from scenarios.base import reset
+from scenarios.base import open_incident, reset
 
 SCENARIOS = {
     s.id: s
@@ -20,8 +20,9 @@ def main() -> None:
     if args.scenario == "reset":
         print("Both services are back to healthy defaults.")
         return
-    incident = SCENARIOS[args.scenario].trigger()
-    print(incident.report)
+    report = SCENARIOS[args.scenario].trigger()
+    incident_id = open_incident(report)
+    print(f"Incident #{incident_id} opened ({report.severity}): {report.description}")
 
 
 if __name__ == "__main__":

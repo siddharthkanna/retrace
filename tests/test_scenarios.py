@@ -1,12 +1,23 @@
 """Each scenario must actually produce its incident."""
 
 import os
+import time
 
 import httpx
 import psycopg
 
 from scenarios import charge_without_record, double_charge, double_refund
-from scenarios.base import PROVIDER, charge, new_order_id, set_provider_chaos
+from scenarios.base import (
+    INVESTIGATOR,
+    PROVIDER,
+    IncidentReport,
+    charge,
+    new_order_id,
+    open_incident,
+    reset,
+    set_flags,
+    set_provider_chaos,
+)
 
 
 def _provider_charges(order_id: str) -> int:
@@ -45,3 +56,30 @@ def test_double_refund():
         incident.order_id,
     )
     assert refunded == 6000
+
+
+def test_a_report_becomes_an_incident():
+    report = IncidentReport(description="Test report.", severity="high", order_id="unused")
+    incident_id = open_incident(report)
+
+    incident = httpx.get(f"{INVESTIGATOR}/incidents/{incident_id}").json()
+    assert incident["description"] == "Test report."
+    assert incident["severity"] == "high"
+
+
+def test_flag_changes_are_logged_only_when_a_value_changes():
+    def flag_logs() -> int:
+        with psycopg.connect(os.environ["TELEMETRY_DATABASE_URL"]) as conn:
+            return conn.execute(
+                "SELECT count(*) FROM logs WHERE message = 'feature flags updated'"
+            ).fetchone()[0]
+
+    reset()
+    time.sleep(0.5)  # let the background log writer catch up
+    before = flag_logs()
+
+    reset()  # nothing changes: no log line
+    set_flags(refund_row_locking=False)  # a real change: one log line
+    time.sleep(0.5)
+
+    assert flag_logs() == before + 1

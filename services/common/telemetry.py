@@ -16,7 +16,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from services.common.log_handlers import JsonFormatter, PostgresLogHandler, TraceContextFilter
 from services.common.span_exporter import PostgresSpanExporter
 
-# Spans are written in batches; a short delay keeps evidence fresh for the investigator.
+# Spans are written in batches; a short delay keeps the stored traces close to real time.
 _EXPORT_DELAY_MS = 500
 
 

@@ -1,6 +1,6 @@
 """End-to-end checks for charges against the running stack.
 
-Run with: docker compose exec payment-api pytest
+Run with: docker compose run --rm dev pytest
 """
 
 import os
@@ -9,7 +9,7 @@ from uuid import uuid4
 import httpx
 import psycopg
 
-API = "http://localhost:8000"
+API = os.environ["PAYMENT_API_URL"]
 PROVIDER = os.environ["PROVIDER_URL"]
 
 

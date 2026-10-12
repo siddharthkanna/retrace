@@ -2,7 +2,7 @@
 
 from scenarios.base import (
     GroundTruth,
-    Incident,
+    IncidentReport,
     Scenario,
     charge,
     new_order_id,
@@ -11,13 +11,14 @@ from scenarios.base import (
 )
 
 
-def trigger() -> Incident:
+def trigger() -> IncidentReport:
     set_flags(forward_idempotency_key=False)
     set_provider_chaos(delay_next_charge_response_s=3)
     order_id = new_order_id()
     charge(order_id, 4999)
-    return Incident(
-        report=f"A customer says they were charged twice (49.99 each) for order {order_id}.",
+    return IncidentReport(
+        description=f"A customer says they were charged twice (49.99 each) for order {order_id}.",
+        severity="high",
         order_id=order_id,
     )
 

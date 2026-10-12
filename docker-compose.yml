@@ -38,12 +38,60 @@ services:
       PROVIDER_URL: http://provider-mock:8001
     volumes:
       - ./services:/app/services
-      - ./scenarios:/app/scenarios
-      - ./tests:/app/tests
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
       provider-mock:
+        condition: service_started
+
+  investigator:
+    build: .
+    command: uvicorn investigator.main:app --host 0.0.0.0 --port 8002 --reload
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/investigator
+      TELEMETRY_DATABASE_URL: postgresql://investigator_ro:investigator_ro@db:5432/telemetry
+      TARGET_DATABASE_URL: postgresql://investigator_ro:investigator_ro@db:5432/payments
+      CONFIG_SOURCES: '{"payment-api": "http://payment-api:8000/admin/flags"}'
+      # A model served in the OpenAI format. This one is Ollama running on the host machine.
+      LLM_BASE_URL: http://host.docker.internal:11434/v1
+      LLM_MODEL: qwen2.5-7b-8k
+      TARGET_REPO_DIR: /repo
+      TARGET_REPO_PATHS: '["services/payment_api", "services/common", "db/01_payments.sql", "db/02_telemetry.sql"]'
+    volumes:
+      - ./investigator:/app/investigator
+      - ./.git:/repo/.git:ro
+    ports:
+      - "8002:8002"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  dev:
+    # A workbench for tests, lint and scenarios. Not started by `docker compose up`.
+    profiles: ["dev"]
+    build: .
+    environment:
+      PAYMENT_API_URL: http://payment-api:8000
+      PROVIDER_URL: http://provider-mock:8001
+      INVESTIGATOR_URL: http://investigator:8002
+      INVESTIGATOR_DATABASE_URL: postgresql://app:app@db:5432/investigator
+      DATABASE_URL: postgresql://app:app@db:5432/payments
+      TELEMETRY_DATABASE_URL: postgresql://investigator_ro:investigator_ro@db:5432/telemetry
+      TARGET_DATABASE_URL: postgresql://investigator_ro:investigator_ro@db:5432/payments
+      TARGET_REPO_DIR: /repo
+      TARGET_REPO_PATHS: '["services/payment_api", "services/common", "db/01_payments.sql", "db/02_telemetry.sql"]'
+    volumes:
+      - ./services:/app/services
+      - ./investigator:/app/investigator
+      - ./scenarios:/app/scenarios
+      - ./tests:/app/tests
+      - ./db:/app/db:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./.git:/repo/.git:ro
+    depends_on:
+      payment-api:
+        condition: service_started
+      investigator:
         condition: service_started
