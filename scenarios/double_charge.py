@@ -38,5 +38,9 @@ SCENARIO = Scenario(
             "payment-api log: provider request timed out, retrying",
             "two provider 'charge created' logs in one trace, both with no idempotency key",
         ),
+        must_name=(
+            ("idempotency", "idempotent"),
+            ("retry", "retried", "second attempt"),
+        ),
     ),
 )

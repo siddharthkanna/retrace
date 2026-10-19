@@ -4,7 +4,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from investigator.agent.usage import Totals
 from investigator.llm.types import Message
+from investigator.repro.runner import ReproResult
 
 
 class Report(BaseModel):
@@ -40,6 +42,22 @@ class Evidence(BaseModel):
     result: str
 
 
+class Attempt(BaseModel):
+    """One recipe the model tried, as it wrote it, and how it went."""
+
+    recipe: dict[str, Any]
+    result: ReproResult
+
+
+class Reproduction(BaseModel):
+    """How the attempt to make the incident happen again went, or where it is waiting."""
+
+    outcome: Literal["reproduced", "not_reproduced", "awaiting_approval", "running", "declined"]
+    attempts: list[Attempt]
+    # The recipe waiting for a person's approval, while the outcome is awaiting_approval.
+    pending: dict[str, Any] | None = None
+
+
 class Investigation(BaseModel):
     """Everything an investigation produced."""
 
@@ -48,3 +66,5 @@ class Investigation(BaseModel):
     failure_reason: str | None = None
     evidence: list[Evidence]
     messages: list[Message]
+    reproduction: Reproduction | None = None
+    usage: Totals | None = None

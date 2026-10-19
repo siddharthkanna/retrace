@@ -50,5 +50,9 @@ SCENARIO = Scenario(
             "payment-api log: discarding closed connection, then an unhandled OperationalError",
             "no row in payments for the order",
         ),
+        must_name=(
+            ("database", "connection", "insert", "operationalerror"),
+            ("provider", "charged", "charging", "charge succeeded", "charge was created"),
+        ),
     ),
 )

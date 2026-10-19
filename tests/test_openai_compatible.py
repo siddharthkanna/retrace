@@ -35,9 +35,15 @@ class FakeServer:
         return json.loads(self.requests[-1].content)
 
 
-def _client(server, api_key: str | None = None) -> OpenAICompatibleClient:
+def _client(
+    server, api_key: str | None = None, api_key_header: str | None = None
+) -> OpenAICompatibleClient:
     return OpenAICompatibleClient(
-        "http://model.test/v1", "test-model", api_key, transport=httpx.MockTransport(server)
+        "http://model.test/v1",
+        "test-model",
+        api_key,
+        api_key_header,
+        transport=httpx.MockTransport(server),
     )
 
 
@@ -150,3 +156,80 @@ def _unreachable(request: httpx.Request) -> httpx.Response:
 def test_failures_become_a_model_error(server, message):
     with pytest.raises(ModelError, match=message):
         _client(server).complete(HELLO, [TOOL])
+
+
+def test_a_too_busy_reply_is_waited_out_and_tried_again(monkeypatch):
+    waits = []
+    monkeypatch.setattr("investigator.llm.openai_compatible.time.sleep", waits.append)
+    replies = [httpx.Response(429, headers={"retry-after": "2"})]
+
+    def server(request: httpx.Request) -> httpx.Response:
+        ok = {"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+        return replies.pop() if replies else httpx.Response(200, json=ok)
+
+    reply = _client(server).complete(HELLO, [])
+
+    assert reply.content == "ok"
+    assert waits == [3.0]
+
+
+def test_a_reply_records_its_tokens_and_time():
+    server = FakeServer(
+        body={
+            "choices": [{"message": {"role": "assistant", "content": "ok"}}],
+            "usage": {"prompt_tokens": 120, "completion_tokens": 30, "total_tokens": 150},
+        }
+    )
+
+    usage = _client(server).complete(HELLO, []).usage
+
+    assert (usage.input_tokens, usage.output_tokens) == (120, 30)
+    assert usage.seconds >= 0
+
+
+def test_a_reply_without_token_counts_records_none():
+    usage = _client(FakeServer()).complete(HELLO, []).usage
+
+    assert (usage.input_tokens, usage.output_tokens) == (0, 0)
+
+
+def test_the_usage_is_not_sent_back_to_the_model():
+    server = FakeServer()
+    earlier = Message(role="assistant", content="hi", usage={"input_tokens": 5})
+
+    _client(server).complete([*HELLO, earlier], [])
+
+    assert "usage" not in server.sent["messages"][1]
+
+
+def test_a_dropped_connection_is_tried_once_more():
+    drops = [httpx.RemoteProtocolError("Server disconnected without sending a response.")]
+
+    def server(request: httpx.Request) -> httpx.Response:
+        if drops:
+            raise drops.pop()
+        ok = {"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+        return httpx.Response(200, json=ok)
+
+    assert _client(server).complete(HELLO, []).content == "ok"
+
+
+def test_the_api_key_can_be_sent_in_a_header_of_its_own():
+    server = FakeServer()
+
+    _client(server, api_key="secret", api_key_header="x-api-key").complete(HELLO, [])
+
+    assert server.requests[-1].headers["x-api-key"] == "secret"
+    assert "Authorization" not in server.requests[-1].headers
+
+
+def test_a_long_wait_is_not_waited_out(monkeypatch):
+    waits = []
+    monkeypatch.setattr("investigator.llm.openai_compatible.time.sleep", waits.append)
+    server = httpx.MockTransport(lambda r: httpx.Response(429, headers={"retry-after": "1500"}))
+    client = OpenAICompatibleClient("http://model.test/v1", "test-model", transport=server)
+
+    with pytest.raises(ModelError):
+        client.complete(HELLO, [])
+
+    assert waits == []

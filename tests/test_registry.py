@@ -16,7 +16,10 @@ TARGET_SYSTEM_WORDS = ("payment", "charge", "refund", "idempotency")
 @pytest.fixture(scope="module")
 def resources(telemetry_pool, target_pool) -> Resources:
     return Resources(
-        telemetry_pool=telemetry_pool, target_pool=target_pool, config_sources={}, repo=Repo()
+        telemetry_pool=telemetry_pool,
+        target_pool=target_pool,
+        config_sources={"api": "http://api.invalid/settings"},
+        repo=Repo(dir="/repo"),
     )
 
 
@@ -47,6 +50,12 @@ def test_all_seven_tools_are_described(registry):
         "show_commit",
     ]
     assert all(definition.description for definition in definitions)
+
+
+def test_only_tools_for_what_is_connected_are_offered(telemetry_pool):
+    registry = ToolRegistry(Resources(telemetry_pool=telemetry_pool))
+
+    assert [definition.name for definition in registry.definitions()] == ["query_logs", "get_trace"]
 
 
 def test_an_optional_input_is_described_plainly(registry):

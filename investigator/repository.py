@@ -40,7 +40,7 @@ class IncidentRepository:
 
 _INVESTIGATION_COLUMNS = (
     "id, incident_id, model, status, failure_reason, report, evidence, messages,"
-    " started_at, finished_at"
+    " reproduction, usage, started_at, finished_at"
 )
 _INTERRUPTED = "The service restarted during the investigation."
 
@@ -72,10 +72,12 @@ class InvestigationRepository:
     def finish(self, investigation_id: int, result: Investigation) -> InvestigationRecord:
         """Store the outcome and give the incident the same status."""
         report = Jsonb(result.report.model_dump()) if result.report else None
+        reproduction = Jsonb(result.reproduction.model_dump()) if result.reproduction else None
+        usage = Jsonb(result.usage.model_dump()) if result.usage else None
         with self._pool.connection() as conn, self._cursor(conn) as cur:
             record = cur.execute(
                 "UPDATE investigations SET status = %s, failure_reason = %s, report = %s,"
-                " evidence = %s, messages = %s, finished_at = now()"
+                " evidence = %s, messages = %s, reproduction = %s, usage = %s, finished_at = now()"
                 f" WHERE id = %s RETURNING {_INVESTIGATION_COLUMNS}",
                 (
                     result.status,
@@ -83,6 +85,8 @@ class InvestigationRepository:
                     report,
                     Jsonb([item.model_dump() for item in result.evidence]),
                     Jsonb([message.model_dump() for message in result.messages]),
+                    reproduction,
+                    usage,
                     investigation_id,
                 ),
             ).fetchone()
@@ -91,6 +95,24 @@ class InvestigationRepository:
                 (result.status, record.incident_id),
             )
         return record
+
+    def approve(self, investigation_id: int) -> InvestigationRecord | None:
+        """Mark a waiting recipe as approved and running. None if nothing was waiting."""
+        return self._settle(investigation_id, "running")
+
+    def decline(self, investigation_id: int) -> InvestigationRecord | None:
+        """End a reproduction whose recipe was declined. None if nothing was waiting."""
+        return self._settle(investigation_id, "declined")
+
+    def _settle(self, investigation_id: int, outcome: str) -> InvestigationRecord | None:
+        # The condition makes this happen once, however many times the button is pressed.
+        with self._pool.connection() as conn, self._cursor(conn) as cur:
+            return cur.execute(
+                "UPDATE investigations SET reproduction = reproduction || %s"
+                " WHERE id = %s AND reproduction->>'outcome' = 'awaiting_approval'"
+                f" RETURNING {_INVESTIGATION_COLUMNS}",
+                (Jsonb({"outcome": outcome}), investigation_id),
+            ).fetchone()
 
     def list_for(self, incident_id: int) -> list[InvestigationRecord]:
         """Every investigation of one incident, newest first."""
@@ -114,6 +136,12 @@ class InvestigationRepository:
             ]
             conn.execute(
                 "UPDATE incidents SET status = 'failed' WHERE id = ANY(%s)", (incident_ids,)
+            )
+            # An approved recipe was being carried out; the report itself is kept.
+            conn.execute(
+                "UPDATE investigations SET reproduction = reproduction || %s"
+                " WHERE reproduction->>'outcome' = 'running'",
+                (Jsonb({"outcome": "not_reproduced", "pending": None}),),
             )
         return len(incident_ids)
 

@@ -10,4 +10,5 @@ RUN uv sync --frozen
 COPY services ./services
 COPY investigator ./investigator
 COPY scenarios ./scenarios
+COPY evals ./evals
 COPY tests ./tests

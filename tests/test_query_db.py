@@ -1,9 +1,18 @@
 """Checks for the query_db tool, run against the real target database."""
 
+import os
+
+import psycopg
 import pytest
 from psycopg_pool import ConnectionPool
 
-from investigator.tools.database import MAX_ROWS, QueryDbInput, QueryDbOutput, query_db
+from investigator.tools.database import (
+    MAX_ROWS,
+    QueryDbInput,
+    QueryDbOutput,
+    query_db,
+    read_only_pool,
+)
 from scenarios.base import charge, new_order_id, refund
 
 
@@ -105,3 +114,9 @@ def test_a_slow_query_is_cancelled(target_pool):
     result = _run(target_pool, "SELECT pg_sleep(8)")  # the login allows 5 seconds
 
     assert "timeout" in result.error
+
+
+def test_a_read_only_pool_refuses_writes_even_with_a_login_that_may_write():
+    with read_only_pool(os.environ["DATABASE_URL"]) as pool, pool.connection() as conn:
+        with pytest.raises(psycopg.errors.ReadOnlySqlTransaction):
+            conn.execute("CREATE TABLE should_not_exist (id INT)")

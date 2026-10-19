@@ -4,7 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from investigator.agent.report import Evidence, Report
+from investigator.agent.report import Evidence, Report, Reproduction
+from investigator.agent.usage import Totals
 from investigator.enums import InvestigationStatus, Severity, Source, Status
 from investigator.llm.types import Message
 
@@ -32,5 +33,7 @@ class InvestigationRecord(BaseModel):
     report: Report | None
     evidence: list[Evidence]
     messages: list[Message]
+    reproduction: Reproduction | None
+    usage: Totals | None
     started_at: datetime
     finished_at: datetime | None

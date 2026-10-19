@@ -1,8 +1,10 @@
+# Retrace itself: the investigator, its web page and its own database.
+# What it investigates is set in the .env file (see .env.example).
 services:
   db:
     image: postgres:17
     environment:
-      # Local test-bed credentials only; nothing here is reachable from outside Docker.
+      # Local credentials only; nothing here is reachable from outside Docker.
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: payments
@@ -16,82 +18,59 @@ services:
       timeout: 2s
       retries: 15
 
-  provider-mock:
-    build: .
-    command: uvicorn services.provider_mock.main:app --host 0.0.0.0 --port 8001 --reload
-    environment:
-      TELEMETRY_DATABASE_URL: postgresql://app:app@db:5432/telemetry
-    volumes:
-      - ./services:/app/services
-    ports:
-      - "8001:8001"
-    depends_on:
-      db:
-        condition: service_healthy
-
-  payment-api:
-    build: .
-    command: uvicorn services.payment_api.main:app --host 0.0.0.0 --port 8000 --reload
-    environment:
-      DATABASE_URL: postgresql://app:app@db:5432/payments
-      TELEMETRY_DATABASE_URL: postgresql://app:app@db:5432/telemetry
-      PROVIDER_URL: http://provider-mock:8001
-    volumes:
-      - ./services:/app/services
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-      provider-mock:
-        condition: service_started
-
   investigator:
     build: .
     command: uvicorn investigator.main:app --host 0.0.0.0 --port 8002 --reload
     environment:
       DATABASE_URL: postgresql://app:app@db:5432/investigator
       TELEMETRY_DATABASE_URL: postgresql://investigator_ro:investigator_ro@db:5432/telemetry
-      TARGET_DATABASE_URL: postgresql://investigator_ro:investigator_ro@db:5432/payments
-      CONFIG_SOURCES: '{"payment-api": "http://payment-api:8000/admin/flags"}'
-      # A model served in the OpenAI format. This one is Ollama running on the host machine.
-      LLM_BASE_URL: http://host.docker.internal:11434/v1
-      LLM_MODEL: qwen2.5-7b-8k
-      TARGET_REPO_DIR: /repo
-      TARGET_REPO_PATHS: '["services/payment_api", "services/common", "db/01_payments.sql", "db/02_telemetry.sql"]'
+      TELEMETRY_INGEST_DATABASE_URL: postgresql://app:app@db:5432/telemetry
+      # A model served in the OpenAI format. Left unset, it is Ollama on the host machine.
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5-7b-8k}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_API_KEY_HEADER: ${LLM_API_KEY_HEADER:-}
+      LLM_PRICE_INPUT_PER_MILLION: ${LLM_PRICE_INPUT_PER_MILLION:-}
+      LLM_PRICE_OUTPUT_PER_MILLION: ${LLM_PRICE_OUTPUT_PER_MILLION:-}
+      AGENT_TRACES_ENDPOINT: ${AGENT_TRACES_ENDPOINT:-}
+      # The system to investigate. Each one left unset is simply not used.
+      TARGET_DATABASE_URL: ${TARGET_DATABASE_URL:-}
+      CONFIG_SOURCES: ${CONFIG_SOURCES:-}
+      TARGET_API_URL: ${TARGET_API_URL:-}
+      REPRODUCTION_NEEDS_APPROVAL: ${REPRODUCTION_NEEDS_APPROVAL:-}
+      TARGET_REPO_DIR: ${TARGET_REPO:+/repo}
+      TARGET_REPO_PATHS: ${TARGET_REPO_PATHS:-}
+      TARGET_REPO_BASELINE: ${TARGET_REPO_BASELINE:-}
     volumes:
       - ./investigator:/app/investigator
-      - ./.git:/repo/.git:ro
+      # The target system's code. With TARGET_REPO unset, this folder is mounted but not used.
+      - ${TARGET_REPO:-./investigator}:/repo:ro
+    extra_hosts:
+      # Lets addresses in .env reach programs running on this machine, on Linux too.
+      - host.docker.internal:host-gateway
     ports:
       - "8002:8002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health')"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
     depends_on:
       db:
         condition: service_healthy
 
-  dev:
-    # A workbench for tests, lint and scenarios. Not started by `docker compose up`.
-    profiles: ["dev"]
-    build: .
+  viewer:
+    # The web page for reading investigations: http://localhost:5173
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev"
     environment:
-      PAYMENT_API_URL: http://payment-api:8000
-      PROVIDER_URL: http://provider-mock:8001
       INVESTIGATOR_URL: http://investigator:8002
-      INVESTIGATOR_DATABASE_URL: postgresql://app:app@db:5432/investigator
-      DATABASE_URL: postgresql://app:app@db:5432/payments
-      TELEMETRY_DATABASE_URL: postgresql://investigator_ro:investigator_ro@db:5432/telemetry
-      TARGET_DATABASE_URL: postgresql://investigator_ro:investigator_ro@db:5432/payments
-      TARGET_REPO_DIR: /repo
-      TARGET_REPO_PATHS: '["services/payment_api", "services/common", "db/01_payments.sql", "db/02_telemetry.sql"]'
+    ports:
+      - "5173:5173"
     volumes:
-      - ./services:/app/services
-      - ./investigator:/app/investigator
-      - ./scenarios:/app/scenarios
-      - ./tests:/app/tests
-      - ./db:/app/db:ro
-      - ./pyproject.toml:/app/pyproject.toml:ro
-      - ./.git:/repo/.git:ro
+      - ./viewer:/app
+      # The container keeps its own installed packages, built for Linux.
+      - /app/node_modules
     depends_on:
-      payment-api:
-        condition: service_started
-      investigator:
-        condition: service_started
+      - investigator

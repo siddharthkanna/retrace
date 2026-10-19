@@ -7,6 +7,15 @@ from psycopg import sql
 from psycopg_pool import ConnectionPool
 from pydantic import BaseModel, ConfigDict, Field
 
+# Applied to every connection, whatever login it uses: it can't change anything, and no
+# query runs for longer than five seconds.
+_READ_ONLY = "-c default_transaction_read_only=on -c statement_timeout=5000"
+
+
+def read_only_pool(url: str) -> ConnectionPool:
+    """Open connections to the target system's database that can only read."""
+    return ConnectionPool(url, kwargs={"options": _READ_ONLY}, open=True)
+
 
 class DescribeDbInput(BaseModel):
     """describe_db takes no input."""

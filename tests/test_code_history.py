@@ -202,3 +202,12 @@ def test_only_commit_ids_are_accepted(commit):
 def test_with_no_repository_both_tools_say_so():
     assert _list(Repo()).error == "No code history is available."
     assert _show(Repo(), commit="abcdef1").error == "No code history is available."
+
+
+def test_with_no_allowed_paths_the_whole_repository_may_be_shown(history):
+    everything = Repo(dir=history.root)
+
+    messages = [commit.message for commit in _list(everything).commits]
+
+    assert "hidden only SECRET" in messages
+    assert _list(everything, path="hidden").commits

@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import ValidationError
 
-from investigator.agent.prompt import CONCLUDE, NUDGE, SUBMIT_DESCRIPTION, SYSTEM_PROMPT
+from investigator.agent.prompt import CONCLUDE, NUDGE, SUBMIT_DESCRIPTION, SYSTEM_PROMPT, fence
 from investigator.agent.report import Evidence, Investigation, Report
 from investigator.llm.types import Message, ModelClient, ModelError, ToolCall, ToolDefinition
 from investigator.tools.registry import (
@@ -21,7 +21,7 @@ MAX_STEPS = 20
 # The last steps are kept for the report: one to submit it, one to correct it.
 FINAL_STEPS = 2
 MAX_NUDGES = 3
-MAX_RESULT_CHARS = 6000
+MAX_RESULT_CHARS = 3000
 SUBMIT = "submit_report"
 
 _LABEL = re.compile(r"\bE\d+\b", re.IGNORECASE)
@@ -100,7 +100,7 @@ def _gather(
     request = f"{call.name} {json.dumps(without_empty(call.arguments), sort_keys=True)}"
     if request in already_run:
         return (
-            f"You already ran this exact request. Its result is [{already_run[request]}]."
+            f"You already ran this exact request. Its result is {already_run[request]}."
             f" Try something different, or call {SUBMIT}."
         )
     try:
@@ -115,7 +115,7 @@ def _gather(
     label = f"E{len(evidence) + 1}"
     already_run[request] = label
     evidence.append(Evidence(label=label, tool=call.name, arguments=call.arguments, result=result))
-    return f"[{label}] {result}"
+    return fence(result, label)
 
 
 def _check_report(call: ToolCall, evidence: list[Evidence]) -> Report | str:

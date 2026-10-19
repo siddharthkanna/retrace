@@ -35,6 +35,11 @@ class GroundTruth:
     root_cause: str
     explanation: str
     key_evidence: tuple[str, ...]
+    # What a correct root cause must say. Every group must be met; within a group, any
+    # one wording is enough.
+    must_name: tuple[tuple[str, ...], ...]
+    # Wordings a correct root cause must not contain, such as a false cause planted for the agent.
+    must_not_name: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

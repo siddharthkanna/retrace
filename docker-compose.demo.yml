@@ -1,0 +1,74 @@
+# The built-in example: a small payment system for Retrace to investigate, and a
+# workbench for tests and scenarios. Used together with docker-compose.yml (see the Makefile).
+services:
+  provider-mock:
+    build: .
+    command: uvicorn services.provider_mock.main:app --host 0.0.0.0 --port 8001 --reload
+    environment:
+      TELEMETRY_DATABASE_URL: postgresql://app:app@db:5432/telemetry
+    volumes:
+      - ./services:/app/services
+    ports:
+      - "8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  payment-api:
+    build: .
+    command: uvicorn services.payment_api.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/payments
+      TELEMETRY_DATABASE_URL: postgresql://app:app@db:5432/telemetry
+      PROVIDER_URL: http://provider-mock:8001
+    volumes:
+      - ./services:/app/services
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      provider-mock:
+        condition: service_started
+
+  investigator:
+    # Point the investigator at the payment system, whatever the .env file says.
+    environment:
+      TARGET_DATABASE_URL: postgresql://investigator_ro:investigator_ro@db:5432/payments
+      CONFIG_SOURCES: '{"payment-api": "http://payment-api:8000/admin/flags"}'
+      TARGET_API_URL: http://payment-api:8000
+      TARGET_REPO_DIR: /repo
+      TARGET_REPO_PATHS: '["services/payment_api", "services/common", "db/01_payments.sql", "db/02_telemetry.sql"]'
+      TARGET_REPO_BASELINE: d67f350dc45a6ce9d858455b9b7e0f4d91b4b496
+    volumes:
+      - .:/repo:ro
+
+  dev:
+    # A workbench for tests, lint and scenarios.
+    profiles: ["dev"]
+    build: .
+    environment:
+      PAYMENT_API_URL: http://payment-api:8000
+      PROVIDER_URL: http://provider-mock:8001
+      INVESTIGATOR_URL: http://investigator:8002
+      INVESTIGATOR_DATABASE_URL: postgresql://app:app@db:5432/investigator
+      DATABASE_URL: postgresql://app:app@db:5432/payments
+      TELEMETRY_DATABASE_URL: postgresql://investigator_ro:investigator_ro@db:5432/telemetry
+      TARGET_DATABASE_URL: postgresql://investigator_ro:investigator_ro@db:5432/payments
+      TARGET_REPO_DIR: /repo
+      TARGET_REPO_PATHS: '["services/payment_api", "services/common", "db/01_payments.sql", "db/02_telemetry.sql"]'
+      TARGET_REPO_BASELINE: d67f350dc45a6ce9d858455b9b7e0f4d91b4b496
+    volumes:
+      - ./services:/app/services
+      - ./investigator:/app/investigator
+      - ./scenarios:/app/scenarios
+      - ./evals:/app/evals
+      - ./tests:/app/tests
+      - ./db:/app/db:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./.git:/repo/.git:ro
+    depends_on:
+      payment-api:
+        condition: service_started
+      investigator:
+        condition: service_healthy

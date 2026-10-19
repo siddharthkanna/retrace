@@ -44,5 +44,17 @@ SCENARIO = Scenario(
             "two overlapping POST /refund spans for the same payment",
             "two refund rows whose total exceeds the payment amount",
         ),
+        must_name=(
+            ("refund_row_locking", "row lock", "row-level lock"),
+            (
+                "concurrent",
+                "same time",
+                "simultaneous",
+                "race",
+                "overlap",
+                "not locked",
+                "without a lock",
+            ),
+        ),
     ),
 )

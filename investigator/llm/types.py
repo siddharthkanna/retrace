@@ -25,6 +25,14 @@ class ToolCall(BaseModel):
     arguments: dict[str, Any]
 
 
+class Usage(BaseModel):
+    """What one model reply took: tokens read, tokens written, and time."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    seconds: float = 0
+
+
 class Message(BaseModel):
     """One entry in the conversation."""
 
@@ -34,6 +42,8 @@ class Message(BaseModel):
     tool_calls: list[ToolCall] = []
     # On a tool message: which request this result answers.
     tool_call_id: str | None = None
+    # On an assistant message: what producing it took.
+    usage: Usage | None = None
 
 
 class ModelClient(Protocol):

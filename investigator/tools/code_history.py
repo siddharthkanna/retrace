@@ -91,13 +91,16 @@ def list_commits(repo: Repo, request: ListCommitsInput) -> ListCommitsOutput:
 
 def _pathspecs(repo: Repo, path: str | None) -> list[str]:
     """The paths git may look at: all the allowed ones, or one narrower path inside them."""
-    if repo.dir is None or not repo.paths:
+    if repo.dir is None:
         raise CodeHistoryError("No code history is available.")
     if path is None:
         included = repo.paths
     else:
         path = posixpath.normpath(path)
-        if not any(path == allowed or path.startswith(f"{allowed}/") for allowed in repo.paths):
+        # With no allowed paths set, the whole repository may be shown.
+        if repo.paths and not any(
+            path == allowed or path.startswith(f"{allowed}/") for allowed in repo.paths
+        ):
             raise CodeHistoryError(f"'{path}' is outside the code this tool may show.")
         included = (path,)
     # "literal" switches off git's special path syntax; "exclude" hides a file.

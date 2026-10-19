@@ -2,9 +2,10 @@
 
 import logging
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
+from opentelemetry import trace
 from psycopg_pool import ConnectionPool
 from pydantic import BaseModel, ValidationError
 
@@ -22,6 +23,7 @@ from investigator.tools.logs import QueryLogsInput, query_logs
 from investigator.tools.trace import GetTraceInput, get_trace
 
 logger = logging.getLogger(__name__)
+_tracer = trace.get_tracer("retrace.investigator")
 
 # Values a model sends when it means "this input is not used".
 _EMPTY = (None, "", "null", "None")
@@ -48,9 +50,10 @@ class Resources:
     """Everything the tools need to reach the outside world."""
 
     telemetry_pool: ConnectionPool
-    target_pool: ConnectionPool
-    config_sources: dict[str, str]
-    repo: Repo
+    # The rest is optional. A tool is only offered when what it reads is connected.
+    target_pool: ConnectionPool | None = None
+    config_sources: dict[str, str] = field(default_factory=dict)
+    repo: Repo = Repo()
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,16 @@ class Tool:
     description: str
     input_model: type[BaseModel]
     run: Callable[[Resources, Any], BaseModel]
+    # Whether what the tool reads is connected.
+    available: Callable[[Resources], bool] = lambda resources: True
+
+
+def _has_database(resources: Resources) -> bool:
+    return resources.target_pool is not None
+
+
+def _has_code_history(resources: Resources) -> bool:
+    return resources.repo.dir is not None
 
 
 TOOLS: tuple[Tool, ...] = (
@@ -83,6 +96,7 @@ TOOLS: tuple[Tool, ...] = (
         " links between tables. Call this before query_db.",
         DescribeDbInput,
         lambda resources, request: describe_db(resources.target_pool, request),
+        _has_database,
     ),
     Tool(
         "query_db",
@@ -90,6 +104,7 @@ TOOLS: tuple[Tool, ...] = (
         " 50 rows.",
         QueryDbInput,
         lambda resources, request: query_db(resources.target_pool, request),
+        _has_database,
     ),
     Tool(
         "get_config",
@@ -97,18 +112,21 @@ TOOLS: tuple[Tool, ...] = (
         " search the logs.",
         GetConfigInput,
         lambda resources, request: get_config(resources.config_sources, request),
+        lambda resources: bool(resources.config_sources),
     ),
     Tool(
         "list_commits",
         "List recent changes to the system's code, newest first, with the files each one changed.",
         ListCommitsInput,
         lambda resources, request: list_commits(resources.repo, request),
+        _has_code_history,
     ),
     Tool(
         "show_commit",
         "Show the changed lines of one code change. Use an id returned by list_commits.",
         ShowCommitInput,
         lambda resources, request: show_commit(resources.repo, request),
+        _has_code_history,
     ),
 )
 
@@ -116,7 +134,7 @@ TOOLS: tuple[Tool, ...] = (
 class ToolRegistry:
     def __init__(self, resources: Resources, tools: Sequence[Tool] = TOOLS) -> None:
         self._resources = resources
-        self._tools = {tool.name: tool for tool in tools}
+        self._tools = {tool.name: tool for tool in tools if tool.available(resources)}
 
     def definitions(self) -> list[ToolDefinition]:
         """The tools as they are described to the model."""
@@ -134,6 +152,10 @@ class ToolRegistry:
 
         Raises ToolRequestError if the request can't be carried out.
         """
+        with tool_span(call):
+            return self._run(call)
+
+    def _run(self, call: ToolCall) -> str:
         tool = self._tools.get(call.name)
         if tool is None:
             raise ToolRequestError(
@@ -156,12 +178,25 @@ class ToolRegistry:
         return result.model_dump_json(exclude_none=True)
 
 
+def tool_span(call: ToolCall):
+    """A trace span for one tool call, named as OpenTelemetry's conventions for AI calls name it."""
+    return _tracer.start_as_current_span(
+        f"execute_tool {call.name}",
+        attributes={
+            "gen_ai.operation.name": "execute_tool",
+            "gen_ai.tool.name": call.name,
+            "gen_ai.tool.call.id": call.id,
+        },
+    )
+
+
 def simplify_schema(schema: dict[str, Any]) -> dict[str, Any]:
     """Rewrite Pydantic's description of a tool's inputs in the plainest equivalent form.
 
     Small models misread the nested "X or null" that Pydantic writes for an optional
     input, so only X is kept: an input that is left out is simply not used.
     """
+    schema = _inline(schema, schema.get("$defs", {}))
     properties = {}
     for name, spec in schema.get("properties", {}).items():
         spec = {key: value for key, value in spec.items() if key not in ("title", "default")}
@@ -172,3 +207,14 @@ def simplify_schema(schema: dict[str, Any]) -> dict[str, Any]:
             spec["anyOf"] = options
         properties[name] = spec
     return {"type": "object", "properties": properties, "required": schema.get("required", [])}
+
+
+def _inline(node: Any, definitions: dict[str, Any]) -> Any:
+    """Replace each pointer to a shared definition with the definition itself."""
+    if isinstance(node, list):
+        return [_inline(item, definitions) for item in node]
+    if not isinstance(node, dict):
+        return node
+    if "$ref" in node:
+        return _inline(definitions[node["$ref"].rsplit("/", 1)[-1]], definitions)
+    return {key: _inline(value, definitions) for key, value in node.items() if key != "title"}

@@ -2,12 +2,22 @@
 
 import argparse
 
-from scenarios import charge_without_record, double_charge, double_refund
+from scenarios import (
+    charge_without_record,
+    double_charge,
+    double_refund,
+    double_refund_injected,
+)
 from scenarios.base import open_incident, reset
 
 SCENARIOS = {
     s.id: s
-    for s in (double_charge.SCENARIO, charge_without_record.SCENARIO, double_refund.SCENARIO)
+    for s in (
+        double_charge.SCENARIO,
+        charge_without_record.SCENARIO,
+        double_refund.SCENARIO,
+        double_refund_injected.SCENARIO,
+    )
 }
 
 

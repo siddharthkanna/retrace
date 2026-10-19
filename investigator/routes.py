@@ -11,7 +11,11 @@ from investigator.repository import (
     InvestigationRepository,
 )
 from investigator.schemas import IncidentCreate, IncidentResponse, InvestigationResponse
-from investigator.service import IncidentNotFoundError, InvestigationService
+from investigator.service import (
+    IncidentNotFoundError,
+    InvestigationService,
+    NothingAwaitingApprovalError,
+)
 
 router = APIRouter()
 
@@ -84,3 +88,33 @@ def list_investigations(
     incident_id: int, investigations: InvestigationsDep
 ) -> list[InvestigationResponse]:
     return [InvestigationResponse.model_validate(r) for r in investigations.list_for(incident_id)]
+
+
+_NOTHING_WAITING = "this investigation has no recipe waiting for approval"
+
+
+@router.post(
+    "/investigations/{investigation_id}/approve",
+    response_model=InvestigationResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def approve_recipe(
+    investigation_id: int, background: BackgroundTasks, service: ServiceDep
+) -> InvestigationResponse:
+    """Let the agent carry out the recipe it proposed."""
+    try:
+        record = service.approve(investigation_id)
+    except NothingAwaitingApprovalError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, _NOTHING_WAITING) from exc
+    background.add_task(service.resume, record)
+    return InvestigationResponse.model_validate(record)
+
+
+@router.post("/investigations/{investigation_id}/decline", response_model=InvestigationResponse)
+def decline_recipe(investigation_id: int, service: ServiceDep) -> InvestigationResponse:
+    """End the reproduction without carrying out the recipe."""
+    try:
+        record = service.decline(investigation_id)
+    except NothingAwaitingApprovalError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, _NOTHING_WAITING) from exc
+    return InvestigationResponse.model_validate(record)

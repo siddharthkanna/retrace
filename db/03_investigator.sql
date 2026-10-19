@@ -23,6 +23,8 @@ CREATE TABLE investigations (
     report         JSONB,
     evidence       JSONB NOT NULL DEFAULT '[]',
     messages       JSONB NOT NULL DEFAULT '[]',
+    reproduction   JSONB,
+    usage          JSONB,
     started_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     finished_at    TIMESTAMPTZ
 );

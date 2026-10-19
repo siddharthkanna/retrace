@@ -1,0 +1,36 @@
+# A second, separate project for Retrace to investigate. It has its own database and is
+# connected to Retrace only through the settings below and Retrace's .env file.
+name: bookings-example
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: bookings
+      POSTGRES_PASSWORD: bookings
+      POSTGRES_DB: bookings
+    volumes:
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U bookings -d bookings"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://bookings:bookings@db:5432/bookings
+      # Send logs and traces to Retrace. These are standard OpenTelemetry settings.
+      OTEL_SERVICE_NAME: bookings-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:8002
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRICS_EXPORTER: none
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - "8010:8000"
+    depends_on:
+      db:
+        condition: service_healthy
