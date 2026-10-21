@@ -1,36 +1,81 @@
+/* Style: "Framed sheet" (tasteskill app sheet, seed 1238969021). A tinted L-frame holds the
+   incident list and the top bar; the work sits on a white sheet. Colour goes on data only: the
+   evidence a report cites, and the status pills. */
 :root {
-  --bg: #ffffff;
-  --subtle: #fafafa;
-  --hover: #f2f2f2;
-  --border: #eaeaea;
-  --text: #171717;
-  --muted: #6f6f6f;
-  --good: #16a34a;
-  --bad: #dc2626;
-  --warn: #d97706;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
-  font-size: 14px;
-  line-height: 1.55;
+  /* The landing page's stones: a warm ground, ink, and one olive accent on the data. */
+  --ground: #eeecea;
+  --surface: #faf9f7;
+  --raised: #f1efec;
+  --active: #e4e1dd;
+  --border: #e0dcd6;
+  --rule: #ebe8e4;
+  --control: #cdc3b6;
+  --text: #333231;
+  --muted: #5f5a55;
+  --primary: #333231;
+  --primary-ink: #faf9f7;
+  --accent: #5c6b54;
+  --accent-ink: #ffffff;
+  --accent-pale: #e2e6dc;
+  --pill-positive-bg: #e2e8da;
+  --pill-positive-ink: #34432c;
+  --pill-negative-bg: #f5dfdc;
+  --pill-negative-ink: #8a2522;
+  --pill-warning-bg: #f4ecd6;
+  --pill-warning-ink: #6f5310;
+  --pill-warning-edge: #e3d3a4;
+  --pill-neutral-bg: #e4e1dd;
+  --pill-neutral-ink: #3f3d3b;
+
+  --radius-sheet: 16px;
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --sheet-inset: 8px;
+  --sidebar-width: 264px;
+  --gap: 40px;
+  --pad: 40px 48px;
+  --control-height: 36px;
+  --fs-title: 22px;
+  --fs-section: 16px;
+  --fs-kpi: 28px;
+  --fs-body: 14px;
+  --fs-small: 12px;
+  --mono:
+    'IBM Plex Mono', ui-monospace, Menlo, monospace; /* IDs, labels, tool names and code only. taste-skill-ignore */
+
+  font-family: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--fs-body);
+  line-height: 22px;
   color: var(--text);
-  background: var(--bg);
+  background: var(--ground);
   -webkit-font-smoothing: antialiased;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0a0a0a;
-    --subtle: #111111;
-    --hover: #1a1a1a;
-    --border: #242424;
-    --text: #ededed;
-    --muted: #8f8f8f;
-    --good: #4ade80;
-    --bad: #f87171;
-    --warn: #fbbf24;
+    --ground: #1b1a19;
+    --surface: #232221;
+    --raised: #2b2a28;
+    --active: #333130;
+    --border: #3a3836;
+    --rule: #2f2d2b;
+    --control: #57534f;
+    --text: #eeecea;
+    --muted: #b5afa8;
+    --primary: #eeecea;
+    --primary-ink: #232221;
+    --accent: #a3b596;
+    --accent-ink: #1b1a19;
+    --accent-pale: #333a2e;
+    --pill-positive-bg: #2f3a29;
+    --pill-positive-ink: #b9cbab;
+    --pill-negative-bg: #3d2423;
+    --pill-negative-ink: #f0a39b;
+    --pill-warning-bg: #3a3120;
+    --pill-warning-ink: #e6c77d;
+    --pill-warning-edge: #5e4d26;
+    --pill-neutral-bg: #333130;
+    --pill-neutral-ink: #d6d1cb;
   }
 }
 
@@ -40,248 +85,25 @@
 
 body {
   margin: 0;
+  background: var(--ground);
 }
 
 h1,
 h2,
 h3,
 h4,
-h5 {
+p,
+ul,
+ol,
+dl,
+dd {
   margin: 0;
-  font-weight: 600;
 }
 
-p {
-  margin: 0;
-}
-
-:focus-visible {
-  outline: 2px solid var(--text);
-  outline-offset: 2px;
-}
-
-/* Layout: a fixed sidebar and a reading column, each scrolling on its own. */
-
-.app {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  height: 100vh;
-}
-
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: var(--subtle);
-  border-right: 1px solid var(--border);
-}
-
-.main {
-  overflow-y: auto;
-}
-
-.content {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2.5rem 2rem 4rem;
-}
-
-@media (max-width: 800px) {
-  .app {
-    grid-template-columns: minmax(0, 1fr);
-    height: auto;
-  }
-
-  .sidebar {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .incidents {
-    max-height: 40vh;
-  }
-
-  .content {
-    padding: 1.5rem 1rem 3rem;
-  }
-}
-
-/* Sidebar */
-
-.brand {
-  padding: 1rem 1.25rem;
-  font-size: 1rem;
-  letter-spacing: -0.01em;
-}
-
-.new-incident {
-  margin: 0 0.75rem 0.75rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-
-.new-incident summary {
-  padding: 0.5rem 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
+ul,
+ol {
+  padding: 0;
   list-style: none;
-}
-
-.new-incident summary::-webkit-details-marker {
-  display: none;
-}
-
-.new-incident summary::before {
-  content: '+';
-  margin-right: 0.5rem;
-  color: var(--muted);
-}
-
-.new-incident[open] summary::before {
-  content: '−';
-}
-
-.new-incident form {
-  padding: 0 0.75rem 0.75rem;
-}
-
-.incidents {
-  flex: 1;
-  min-height: 0;
-  margin: 0;
-  padding: 0 0.5rem 0.75rem;
-  list-style: none;
-  overflow-y: auto;
-}
-
-.incident {
-  display: block;
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  text-align: left;
-  background: none;
-  border: none;
-  border-radius: 6px;
-}
-
-.incident:hover,
-.incident.selected {
-  background: var(--hover);
-}
-
-.incident-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.incident.selected .incident-text {
-  font-weight: 500;
-}
-
-.incident-meta {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 0.25rem;
-}
-
-/* Incident and investigation */
-
-.incident-head {
-  padding-bottom: 2rem;
-}
-
-.incident-head h2 {
-  margin: 0.4rem 0 1.25rem;
-  font-size: 1.4rem;
-  line-height: 1.35;
-  letter-spacing: -0.015em;
-}
-
-.investigation {
-  padding: 2rem 0;
-  border-top: 1px solid var(--border);
-}
-
-.investigation h3 {
-  font-size: 1rem;
-}
-
-.investigation h3 .muted {
-  margin-left: 0.5rem;
-  font-weight: 400;
-}
-
-.investigation > section {
-  margin-top: 1.75rem;
-}
-
-.investigation ul,
-.investigation ol {
-  margin: 0;
-  padding-left: 1.2rem;
-}
-
-.investigation li + li {
-  margin-top: 0.35rem;
-}
-
-h4 {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin: 1.25rem 0 0.35rem;
-  font-size: 0.86rem;
-  font-weight: 500;
-  color: var(--muted);
-}
-
-section > h4:first-child {
-  margin-top: 0;
-}
-
-h5 {
-  margin: 1rem 0 0.35rem;
-  font-size: 0.86rem;
-  font-weight: 500;
-  color: var(--muted);
-}
-
-.prominent {
-  font-size: 1.1rem;
-  line-height: 1.5;
-}
-
-/* Small pieces */
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.spread {
-  justify-content: space-between;
-}
-
-.muted {
-  color: var(--muted);
-  font-size: 0.86rem;
-}
-
-.note {
-  margin-top: 0.75rem;
-}
-
-.empty {
-  padding: 2rem 0;
-}
-
-.error {
-  margin-top: 0.75rem;
-  color: var(--bad);
 }
 
 button,
@@ -291,205 +113,937 @@ textarea {
   color: inherit;
 }
 
-button {
-  cursor: pointer;
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
-.primary {
-  padding: 0.4rem 0.9rem;
-  font-weight: 500;
-  color: var(--bg);
-  background: var(--text);
-  border: none;
-  border-radius: 6px;
-  white-space: nowrap;
+code,
+pre,
+.mono {
+  font-family: var(--mono);
+  font-size: 13px;
 }
 
-.primary:hover:not(:disabled) {
-  opacity: 0.85;
+.num {
+  font-variant-numeric: tabular-nums;
 }
 
-.primary:disabled {
-  opacity: 0.45;
-  cursor: default;
+.muted {
+  color: var(--muted);
 }
 
-.secondary {
-  padding: 0.4rem 0.9rem;
-  font-weight: 500;
-  background: var(--bg);
+/* The shell: sidebar and top bar share the frame; the sheet is inset 8px right and bottom.
+   Columns: 228 sidebar + the sheet, which takes the rest less its 8px inset. */
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-rows: 48px minmax(0, 1fr);
+  height: 100vh;
+}
+
+.sidebar {
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 12px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: calc(var(--sheet-inset) + 16px);
+}
+
+.sheet {
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 var(--sheet-inset) var(--sheet-inset) 0;
+  padding: var(--pad);
+  background: var(--surface);
+  scrollbar-gutter: stable;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sheet);
 }
 
-.secondary:hover:not(:disabled) {
-  background: var(--hover);
+/* Sidebar */
+
+.brand {
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 10px;
+  font-weight: 600;
+  font-size: 15px;
 }
 
-.secondary:disabled {
-  opacity: 0.45;
-  cursor: default;
+.new-incident {
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  margin: 4px 0 28px;
 }
 
-.approval {
-  margin-top: 0.5rem;
-  padding: 1rem;
-  border: 1px solid var(--warn);
-  border-radius: 8px;
+/* The New incident dialog: the one thing on the screen that floats, so it may cast a shadow. */
+.dialog {
+  width: min(520px, calc(100vw - 32px));
+  padding: 0;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.18); /* the dialog floats. taste-skill-ignore */
 }
 
-.approval pre {
-  margin: 0.75rem 0;
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.32);
+}
+
+.dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.dialog h2 {
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.dialog h2 + p {
+  margin-top: -8px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 500;
 }
 
 textarea,
 select {
-  padding: 0.45rem 0.6rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--control);
+  border-radius: var(--radius-control);
+  font-weight: 400;
 }
 
 textarea {
-  display: block;
-  width: 100%;
-  margin-bottom: 0.5rem;
   resize: vertical;
 }
 
-select {
-  flex: 1;
-  min-width: 0;
-}
-
-/* A status: a coloured dot and a quiet word. */
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.86rem;
-  font-weight: 400;
+textarea::placeholder {
   color: var(--muted);
-  white-space: nowrap;
 }
 
-.badge::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--dot, var(--muted));
+/* The list: two titled groups, each row the incident's words over a quiet status line. */
+.incidents {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -12px;
+  padding: 0 12px 16px;
 }
 
-.badge.resolved,
-.badge.reproduced {
-  --dot: var(--good);
+.group + .group {
+  margin-top: 24px;
 }
 
-.badge.failed,
-.badge.invalid_recipe {
-  --dot: var(--bad);
+.group h2 {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px 8px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--muted);
 }
 
-.badge.investigating,
-.badge.running,
-.badge.awaiting_approval,
-.badge.not_reproduced {
-  --dot: var(--warn);
+.group ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .badge.investigating::before,
-  .badge.running::before,
-  .badge.awaiting_approval::before {
-    animation: pulse 1.4s ease-in-out infinite;
-  }
+.incident {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 9px;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  transition: background-color 120ms ease;
 }
 
-@keyframes pulse {
-  50% {
-    opacity: 0.3;
-  }
+.incident:hover {
+  background: var(--active);
 }
 
-pre,
-code,
-.chip {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.86rem;
+.incident.selected {
+  background: var(--surface);
+  border-color: var(--border);
 }
 
-.chip {
-  display: inline-block;
-  margin-right: 0.35rem;
-  padding: 0.05rem 0.4rem;
-  color: var(--text);
-  text-decoration: none;
-  background: var(--hover);
-  border-radius: 4px;
+.incident-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 20px;
 }
 
-a.chip:hover {
-  background: var(--border);
-}
-
-/* Expandable rows: recipes and pieces of evidence. */
-
-.block {
-  border-bottom: 1px solid var(--border);
-}
-
-.block summary {
+.incident-meta {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 0.25rem;
-  cursor: pointer;
-  list-style: none;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-small);
+  line-height: 16px;
+  color: var(--muted);
 }
 
-.block summary::-webkit-details-marker {
+.incident-meta .mono {
+  font-size: var(--fs-small);
+}
+
+/* Status as a small dot and its word: quieter than a pill in a long list. */
+.dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--control);
+}
+
+.dot.resolved::before {
+  background: var(--pill-positive-ink);
+  opacity: 0.7;
+}
+
+.dot.failed::before {
+  background: var(--pill-negative-ink);
+}
+
+.dot.investigating::before {
+  background: var(--accent);
+}
+
+.dot.open::before {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+
+/* Top bar */
+
+.menu-button {
   display: none;
 }
 
-.block summary:hover {
-  background: var(--subtle);
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
 }
 
-.block summary > * {
-  flex-shrink: 0;
+.crumbs .mono {
+  color: var(--text);
 }
 
-.block summary > .muted {
-  flex: 1;
+/* Controls: one height, near-black primary, white secondary with a 1px edge. */
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  height: var(--control-height);
+  padding: 0 16px;
+  border-radius: 999px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    transform 80ms ease;
+}
+
+.primary {
+  background: var(--primary);
+  color: var(--primary-ink);
+  border: 1px solid var(--primary);
+}
+
+.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 85%, var(--surface));
+}
+
+.secondary {
+  background: var(--surface);
+  border: 1px solid var(--control);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--raised);
+}
+
+.primary:active:not(:disabled),
+.secondary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Status pills: a pale tint with dark text of the same hue. */
+
+.pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--pill-neutral-bg);
+  color: var(--pill-neutral-ink);
+}
+
+.pill.positive {
+  background: var(--pill-positive-bg);
+  color: var(--pill-positive-ink);
+}
+
+.pill.negative {
+  background: var(--pill-negative-bg);
+  color: var(--pill-negative-ink);
+}
+
+.pill.warning {
+  background: var(--pill-warning-bg);
+  color: var(--pill-warning-ink);
+}
+
+/* The incident's title row */
+
+.title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap);
+  margin-bottom: 48px;
+}
+
+.title-row h1,
+.blank h1 {
+  font-size: 26px;
+  line-height: 30px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  max-width: 64ch;
+}
+
+.title-row p {
+  margin-top: 10px;
+}
+
+.blank p {
+  margin-top: 8px;
+}
+
+.notice {
+  margin-bottom: var(--gap);
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+}
+
+.notice.error {
+  background: var(--pill-negative-bg);
+  color: var(--pill-negative-ink);
+}
+
+.empty {
+  padding: 10px 12px;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-card);
+}
+
+/* Investigations as underline tabs on a full-width rule. */
+
+.tabs {
+  display: flex;
+  gap: 20px;
+  margin-bottom: var(--gap);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.tabs button {
+  display: flex;
+  gap: 6px;
+  padding: 0 0 10px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tabs button[aria-selected='true'] {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: var(--text);
+}
+
+/* One investigation */
+
+.investigation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.block-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.block-head h2 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.push {
+  margin-left: auto;
+}
+
+.panel {
   min-width: 0;
+}
+
+.repro,
+.usage {
+  padding: 28px;
+  background: var(--raised);
+  border-radius: 12px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 20px;
+}
+
+.panel-head h3 {
+  letter-spacing: -0.02em;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.label {
+  margin-bottom: 10px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* Two columns: the finding and its evidence (2fr), the reproduction and usage (1fr).
+   At 1440: sheet 1196 - 2 x 48 padding - 2 borders = 1098 = 2 x 350 + 48 + 350. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+  min-width: 0;
+}
+
+.usage dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.usage dt {
+  color: var(--muted);
+}
+
+.cause {
+  font-size: 20px;
+  line-height: 32px;
+  max-width: 62ch;
+}
+
+.cause code {
+  font-size: 16px;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 40px;
+  margin: 40px 0;
+}
+
+.pair:last-child {
+  margin-bottom: 0;
+}
+
+.ruled-out li {
+  padding-left: 14px;
+  position: relative;
+}
+
+.ruled-out li::before {
+  content: '–';
+  position: absolute;
+  left: 0;
+  color: var(--muted);
+}
+
+/* The evidence trail: every result in the order gathered; the cited ones carry the hue. */
+.trail {
+  margin-top: 32px;
+}
+
+.trail ol {
+  display: grid;
+  /* One row when it fits; on a narrower column the cells wrap rather than cut their names. */
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 4px;
+  max-width: calc(var(--count, 11) * 80px);
+  margin-top: 8px;
+}
+
+.trail button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 7px;
+  text-align: left;
+  background: var(--raised);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.trail button:hover {
+  border-color: var(--control);
+}
+
+.trail .tool {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--muted);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100%;
 }
 
-.block[open] {
-  padding-bottom: 0.9rem;
+.trail button.cited {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
-.block:target summary {
-  background: var(--hover);
+.trail button.cited .tool {
+  color: var(--accent-ink);
+}
+
+.trail button.ruled {
+  background: var(--accent-pale);
+}
+
+/* Reproduction */
+
+.verdict {
+  font-size: var(--fs-section);
+  line-height: 24px;
+}
+
+.attempts {
+  margin-top: 20px;
+}
+
+.attempts li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+
+.attempts li p {
+  flex-basis: 100%;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.approval {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--pill-warning-bg);
+  border: 1px solid var(--pill-warning-edge);
+  border-radius: var(--radius-control);
+}
+
+.approval .actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.recipe {
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.recipe > summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.recipe[open] > summary {
+  margin-bottom: 20px;
+}
+
+.recipe-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings li + li {
+  margin-top: 6px;
+}
+
+.steps {
+  counter-reset: step;
+}
+
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 24px;
+}
+
+.steps > li + li {
+  margin-top: 12px;
+}
+
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.request {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.request + .request {
+  margin-top: 8px;
+}
+
+.request .call {
+  font-weight: 500;
+}
+
+.request .body,
+.request .reply {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.request .reply::before {
+  content: '← ';
 }
 
 pre {
-  margin: 0.25rem 0 0;
-  padding: 0.85rem 1rem;
-  max-height: 360px;
-  overflow: auto;
+  margin: 0;
+  padding: 12px;
+  background: var(--raised);
+  border-radius: var(--radius-control);
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 18px;
   white-space: pre-wrap;
-  word-break: break-word;
-  background: var(--subtle);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  overflow-wrap: anywhere;
 }
 
-.reply {
-  display: block;
-  word-break: break-word;
+.raw {
+  margin-top: 16px;
+}
+
+.raw summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.raw pre {
+  margin-top: 8px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+/* Evidence: rules and alignment, the label and tool in Plex Mono. */
+.rows .row {
+  display: grid;
+  grid-template-columns: 40px 104px minmax(0, 1fr) 84px;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--rule);
+  border-radius: 0;
+}
+
+.rows .row.head {
+  min-height: 36px;
+  border-top: none;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+button.row {
+  cursor: pointer;
+}
+
+button.row:hover,
+button.row.open {
+  background: var(--raised);
+}
+
+.request-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.cited-mark {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.result {
+  margin: 4px 8px 12px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+/* Tablet and phone: the frame folds into a 48px top bar; the list opens as a sheet. */
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 48px auto;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .menu-open .sidebar {
+    display: flex;
+    position: fixed;
+    inset: 48px 0 0;
+    z-index: 2;
+    padding: 8px 16px;
+    background: var(--ground);
+  }
+
+  .menu-open .sidebar .brand {
+    display: none;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    padding: 0 16px 0 8px;
+    background: var(--ground);
+  }
+
+  .menu-button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .sheet {
+    margin: 0;
+    padding: 20px 16px 32px;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  /* One column, read as: the cause, whether it was reproduced, the evidence, what it took. */
+  .layout {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 40px;
+  }
+
+  .column {
+    display: contents;
+  }
+
+  .finding {
+    order: 1;
+  }
+
+  .repro {
+    order: 2;
+  }
+
+  .evidence {
+    order: 3;
+  }
+
+  .usage {
+    order: 4;
+  }
+}
+
+@media (max-width: 640px) {
+  .title-row {
+    flex-direction: column;
+  }
+
+  .title-row h1 {
+    font-size: 20px;
+    line-height: 26px;
+  }
+
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .push {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+
+  .repro,
+  .usage {
+    padding: 20px;
+  }
+
+  /* Evidence rows become two lines: label and tool, then the request. */
+  .rows .row {
+    grid-template-columns: 40px minmax(0, 1fr) 56px;
+    grid-template-areas: 'label tool used' 'label request request';
+    gap: 2px 12px;
+    padding: 10px 4px;
+  }
+
+  .rows .row > :nth-child(1) {
+    grid-area: label;
+    align-self: start;
+  }
+
+  .rows .row > :nth-child(2) {
+    grid-area: tool;
+  }
+
+  .rows .row > :nth-child(3) {
+    grid-area: request;
+  }
+
+  .rows .row > :nth-child(4) {
+    grid-area: used;
+  }
+
+  .rows .row.head {
+    display: none;
+  }
+
+  /* Long IDs wrap onto a second line instead of running off the screen. */
+  .request-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Code inside the tinted rail sits on the sheet's white, so it stays a box of its own. */
+.repro pre {
+  background: var(--surface);
 }

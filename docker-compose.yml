@@ -11,6 +11,9 @@ services:
     volumes:
       # Postgres runs these files in name order, once, when the database is first created.
       - ./db:/docker-entrypoint-initdb.d:ro
+      # Incidents, investigations and telemetry outlive the container. To start empty:
+      # docker compose down -v
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       # -h 127.0.0.1: only counts as ready after the setup files above have run.
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U app -d payments"]
@@ -74,3 +77,6 @@ services:
       - /app/node_modules
     depends_on:
       - investigator
+
+volumes:
+  pgdata:

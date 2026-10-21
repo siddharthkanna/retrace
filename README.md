@@ -125,7 +125,8 @@ its own database and uses only the standard OpenTelemetry library. To connect it
 | `make eval` | Run every scenario 3 times and print how often the agent was right |
 | `make test` | Run the linter and the tests |
 | `make reset` | Put the payment system back to healthy |
-| `make stop` | Stop everything |
+| `make stop` | Stop everything. Incidents and investigations are kept |
+| `docker compose down -v` | Stop everything and delete all incidents, investigations, logs and traces |
 
 The scenarios are `double_refund`, `double_charge` and `charge_without_record`.
 `double_refund_injected` is the double refund with a customer's order ID that tells the
